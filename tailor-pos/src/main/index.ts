@@ -132,6 +132,23 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('search-orders', async (_event, searchTerm) => {
+    try {
+      const query = `
+        SELECT o.*, c.name as customerName, c.phone as phoneNumber
+        FROM orders o
+        JOIN customers c ON o.customer_id = c.id
+        WHERE c.name LIKE ? OR c.phone LIKE ?
+        ORDER BY o.date DESC
+      `
+      const results = db.prepare(query).all(`%${searchTerm}%`, `%${searchTerm}%`)
+      return { success: true, data: results }
+    } catch (error: any) {
+      console.error('Search Error:', error)
+      return { success: false, error: error?.message || 'Unknown search error' }
+    }
+  })
+
   createWindow()
 
   app.on('activate', function () {

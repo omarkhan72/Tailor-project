@@ -21,26 +21,30 @@ const INITIAL_STATE = {
 }
 
 function App(): React.JSX.Element {
+  const [activeTab, setActiveTab] = useState<'new' | 'history'>('new')
   const [formData, setFormData] = useState(INITIAL_STATE)
   const [currentOrderData, setCurrentOrderData] = useState<any>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleReviewOrder = (e: React.FormEvent) => {
     e.preventDefault()
-    
+    setShowConfirmModal(true)
+  }
+
+  const handleConfirmAndPrint = async () => {
     try {
       // @ts-ignore (exposed via preload)
       const result = await window.api.saveOrder(formData)
 
       if (result.success) {
-        // Set data for receipt and trigger print
+        setShowConfirmModal(false)
         setCurrentOrderData({ ...formData, orderId: `#TK-${Date.now().toString().slice(-6)}`, date: new Date().toLocaleString() })
         
-        // Short delay to allow React to render the Receipt component before printing
         setTimeout(() => {
           window.print()
           alert('Measurement Saved & Receipt Printed!')
@@ -61,271 +65,372 @@ function App(): React.JSX.Element {
       {/* Renderer View */}
       <div className="no-print-area min-h-screen bg-slate-50 p-6 font-sans text-slate-900">
         <div className="mx-auto max-w-5xl">
-          {/* Header */}
-          <header className="mb-8 flex items-center justify-between border-b border-slate-200 pb-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-800">Tailor POS</h1>
-              <p className="text-slate-500">New Measurement Entry - Shalwar Kameez</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-medium text-slate-400">Order ID: #TK-2024-001</p>
-              <p className="text-sm font-medium text-slate-400">{new Date().toLocaleDateString()}</p>
-            </div>
-          </header>
-
-          <form onSubmit={handleSave} className="space-y-8">
-            {/* Customer Section */}
-            <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-              <h2 className="mb-6 text-lg font-semibold text-slate-800">Customer Information</h2>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Customer Name</label>
-                  <input
-                    type="text"
-                    name="customerName"
-                    value={formData.customerName}
-                    onChange={handleChange}
-                    placeholder="Enter full name"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                    placeholder="e.g. 0300-1234567"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                    required
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Measurements Section */}
-            <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-              <h2 className="mb-6 text-lg font-semibold text-slate-800">Measurements (Inches)</h2>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {/* Lambayi */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Lambayi (Length)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="lambayi"
-                    value={formData.lambayi}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-
-                {/* Tira */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Tira (Shoulder)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="tira"
-                    value={formData.tira}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-
-                {/* Astain */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Astain (Sleeves)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      step="0.1"
-                      name="astain"
-                      value={formData.astain}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                    />
-                    <select
-                      name="astainType"
-                      value={formData.astainType}
-                      onChange={handleChange}
-                      className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
-                    >
-                      <option>Fit</option>
-                      <option>Loose</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Colar */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Colar (Collar)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      step="0.1"
-                      name="colar"
-                      value={formData.colar}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                    />
-                    <select
-                      name="colarType"
-                      value={formData.colarType}
-                      onChange={handleChange}
-                      className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
-                    >
-                      <option>English Small</option>
-                      <option>Ban</option>
-                      <option>Sherwani</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Width */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Width</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      step="0.1"
-                      name="width"
-                      value={formData.width}
-                      onChange={handleChange}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                    />
-                    <select
-                      name="widthType"
-                      value={formData.widthType}
-                      onChange={handleChange}
-                      className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
-                    >
-                      <option>Daman Gol</option>
-                      <option>Chauras</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Chati */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Chati (Chest)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="chati"
-                    value={formData.chati}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-
-                {/* Shalwar */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Shalwar</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="shalwar"
-                    value={formData.shalwar}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-
-                {/* Painsa */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Painsa</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="painsa"
-                    value={formData.painsa}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-
-                {/* Patti */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Patti</label>
-                  <input
-                    type="text"
-                    name="patti"
-                    value={formData.patti}
-                    onChange={handleChange}
-                    placeholder="e.g. 1.25"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-
-                {/* Front Pocket */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Front Pocket</label>
-                  <input
-                    type="text"
-                    name="frontPocket"
-                    value={formData.frontPocket}
-                    onChange={handleChange}
-                    placeholder="Square / Round"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-
-                {/* Side Pocket */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Side Pocket (Qty)</label>
-                  <input
-                    type="number"
-                    name="sidePocket"
-                    value={formData.sidePocket}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Remarks Section */}
-            <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-              <h2 className="mb-6 text-lg font-semibold text-slate-800">Other Remarks</h2>
-              <textarea
-                name="remarks"
-                value={formData.remarks}
-                onChange={handleChange}
-                rows={3}
-                placeholder="Add any specific requirements or notes here..."
-                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-              ></textarea>
-            </section>
-
-            {/* Action Button */}
-            <div className="flex justify-end pt-4">
+          {/* Navigation Tabs */}
+          <div className="mb-8 flex justify-center">
+            <div className="inline-flex rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
               <button
-                type="submit"
-                className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 sm:w-auto"
+                onClick={() => setActiveTab('new')}
+                className={`rounded-lg px-6 py-2 text-sm font-semibold transition-all ${
+                  activeTab === 'new'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-500 hover:bg-slate-50'
+                }`}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="mr-2 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                  />
-                </svg>
-                Save & Print Receipt
+                New Order
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`rounded-lg px-6 py-2 text-sm font-semibold transition-all ${
+                  activeTab === 'history'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-500 hover:bg-slate-50'
+                }`}
+              >
+                History
               </button>
             </div>
-          </form>
+          </div>
+
+          {activeTab === 'new' ? (
+            <>
+              {/* Header */}
+              <header className="mb-8 flex items-center justify-between border-b border-slate-200 pb-6">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-800">Tailor POS</h1>
+                  <p className="text-slate-500">New Measurement Entry - Shalwar Kameez</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-slate-400">Order ID: #TK-{Date.now().toString().slice(-6)}</p>
+                  <p className="text-sm font-medium text-slate-400">{new Date().toLocaleDateString()}</p>
+                </div>
+              </header>
+
+              <form onSubmit={handleReviewOrder} className="space-y-8">
+                {/* Customer Section */}
+                <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+                  <h2 className="mb-6 text-lg font-semibold text-slate-800">Customer Information</h2>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Customer Name</label>
+                      <input
+                        type="text"
+                        name="customerName"
+                        value={formData.customerName}
+                        onChange={handleChange}
+                        placeholder="Enter full name"
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Phone Number</label>
+                      <input
+                        type="tel"
+                        name="phoneNumber"
+                        value={formData.phoneNumber}
+                        onChange={handleChange}
+                        placeholder="e.g. 0300-1234567"
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        required
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Measurements Section */}
+                <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+                  <h2 className="mb-6 text-lg font-semibold text-slate-800">Measurements (Inches)</h2>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {/* Lambayi */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Lambayi (Length)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        name="lambayi"
+                        value={formData.lambayi}
+                        onChange={handleChange}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+
+                    {/* Tira */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Tira (Shoulder)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        name="tira"
+                        value={formData.tira}
+                        onChange={handleChange}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+
+                    {/* Astain */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Astain (Sleeves)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          name="astain"
+                          value={formData.astain}
+                          onChange={handleChange}
+                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        />
+                        <select
+                          name="astainType"
+                          value={formData.astainType}
+                          onChange={handleChange}
+                          className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
+                        >
+                          <option>Fit</option>
+                          <option>Loose</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Colar */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Colar (Collar)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          name="colar"
+                          value={formData.colar}
+                          onChange={handleChange}
+                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        />
+                        <select
+                          name="colarType"
+                          value={formData.colarType}
+                          onChange={handleChange}
+                          className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
+                        >
+                          <option>English Small</option>
+                          <option>Ban</option>
+                          <option>Sherwani</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Width */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Width</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          name="width"
+                          value={formData.width}
+                          onChange={handleChange}
+                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        />
+                        <select
+                          name="widthType"
+                          value={formData.widthType}
+                          onChange={handleChange}
+                          className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
+                        >
+                          <option>Daman Gol</option>
+                          <option>Chauras</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Chati */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Chati (Chest)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        name="chati"
+                        value={formData.chati}
+                        onChange={handleChange}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+
+                    {/* Shalwar */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Shalwar</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        name="shalwar"
+                        value={formData.shalwar}
+                        onChange={handleChange}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+
+                    {/* Painsa */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Painsa</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        name="painsa"
+                        value={formData.painsa}
+                        onChange={handleChange}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+
+                    {/* Patti */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Patti</label>
+                      <input
+                        type="text"
+                        name="patti"
+                        value={formData.patti}
+                        onChange={handleChange}
+                        placeholder="e.g. 1.25"
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+
+                    {/* Front Pocket */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Front Pocket</label>
+                      <input
+                        type="text"
+                        name="frontPocket"
+                        value={formData.frontPocket}
+                        onChange={handleChange}
+                        placeholder="Square / Round"
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+
+                    {/* Side Pocket */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Side Pocket (Qty)</label>
+                      <input
+                        type="number"
+                        name="sidePocket"
+                        value={formData.sidePocket}
+                        onChange={handleChange}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Remarks Section */}
+                <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+                  <h2 className="mb-6 text-lg font-semibold text-slate-800">Other Remarks</h2>
+                  <textarea
+                    name="remarks"
+                    value={formData.remarks}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder="Add any specific requirements or notes here..."
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  ></textarea>
+                </section>
+
+                {/* Action Button */}
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="submit"
+                    className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 sm:w-auto"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="mr-2 h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                      />
+                    </svg>
+                    Review Order
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <HistoryView />
+          )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="no-print-area fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="bg-indigo-600 p-6 text-white text-center">
+              <h3 className="text-2xl font-bold">Review Measurements</h3>
+              <p className="opacity-90">Please confirm all details before saving</p>
+            </div>
+            
+            <div className="p-8">
+              {/* Customer Info Summary */}
+              <div className="mb-8 flex justify-between border-b border-slate-100 pb-6">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Customer</p>
+                  <p className="text-xl font-bold text-slate-800">{formData.customerName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Contact</p>
+                  <p className="text-xl font-bold text-slate-800">{formData.phoneNumber}</p>
+                </div>
+              </div>
+
+              {/* Measurements Grid Summary */}
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3">
+                {[
+                  { label: 'Length', value: formData.lambayi },
+                  { label: 'Shoulder', value: formData.tira },
+                  { label: 'Sleeves', value: `${formData.astain}" (${formData.astainType})` },
+                  { label: 'Collar', value: `${formData.colar}" (${formData.colarType})` },
+                  { label: 'Width', value: `${formData.width}" (${formData.widthType})` },
+                  { label: 'Chest', value: formData.chati },
+                  { label: 'Shalwar', value: formData.shalwar },
+                  { label: 'Painsa', value: formData.painsa },
+                  { label: 'Patti', value: formData.patti },
+                ].map((item) => (
+                  <div key={item.label} className="bg-slate-50 rounded-xl p-3 ring-1 ring-slate-100">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">{item.label}</p>
+                    <p className="text-sm font-bold text-slate-700">{item.value || '-'}</p>
+                  </div>
+                ))}
+              </div>
+
+              {formData.remarks && (
+                <div className="mt-6 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-100">
+                  <p className="text-[10px] uppercase font-bold text-amber-600 mb-1">Special Remarks</p>
+                  <p className="text-sm text-amber-900">{formData.remarks}</p>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="mt-10 flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 rounded-xl bg-slate-100 py-4 font-bold text-slate-600 transition hover:bg-slate-200"
+                >
+                  Go Back & Edit
+                </button>
+                <button
+                  onClick={handleConfirmAndPrint}
+                  className="flex-1 rounded-xl bg-indigo-600 py-4 font-bold text-white shadow-lg shadow-indigo-100 transition hover:bg-indigo-700 active:scale-[0.98]"
+                >
+                  Confirm & Print
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Print Area */}
       {currentOrderData && (
@@ -336,6 +441,106 @@ function App(): React.JSX.Element {
     </>
   )
 }
+
+function HistoryView(): React.JSX.Element {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const handleSearch = async () => {
+    setLoading(true)
+    try {
+      // @ts-ignore
+      const result = await window.api.searchOrders(searchTerm)
+      if (result.success) {
+        setOrders(result.data)
+      } else {
+        alert('Search failed: ' + result.error)
+      }
+    } catch (error) {
+      console.error(error)
+      alert('Failed to search orders.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Initial load
+  React.useEffect(() => {
+    handleSearch()
+  }, [])
+
+  return (
+    <div className="space-y-6">
+      <header className="flex items-center justify-between border-b border-slate-200 pb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-800">Order History</h1>
+          <p className="text-slate-500">Search and view past measurements</p>
+        </div>
+      </header>
+
+      {/* Search Bar */}
+      <div className="flex gap-4">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          placeholder="Search by name or phone number..."
+          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+        />
+        <button
+          onClick={handleSearch}
+          className="rounded-lg bg-indigo-600 px-6 py-2.5 font-semibold text-white transition-all hover:bg-indigo-700"
+        >
+          {loading ? 'Searching...' : 'Search'}
+        </button>
+      </div>
+
+      {/* Results Table */}
+      <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-6 py-4 font-semibold">Date</th>
+                <th className="px-6 py-4 font-semibold">Customer</th>
+                <th className="px-6 py-4 font-semibold">Phone</th>
+                <th className="px-6 py-4 font-semibold text-center">Measurements</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {orders.length > 0 ? (
+                orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 text-slate-600">{new Date(order.date).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">{order.customerName}</td>
+                    <td className="px-6 py-4 text-slate-600">{order.phoneNumber}</td>
+                    <td className="px-6 py-4">
+                      <div className="grid grid-cols-4 gap-2 text-[10px] text-slate-500">
+                        <span>L: {order.lambayi}"</span>
+                        <span>T: {order.tira}"</span>
+                        <span>A: {order.astain}"</span>
+                        <span>C: {order.colar}"</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                    No records found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 
 function Receipt({ data }: { data: any }): React.JSX.Element {
   return (
