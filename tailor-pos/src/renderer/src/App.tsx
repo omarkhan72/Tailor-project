@@ -446,6 +446,7 @@ function HistoryView(): React.JSX.Element {
   const [searchTerm, setSearchTerm] = useState('')
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
 
   const handleSearch = async () => {
     setLoading(true)
@@ -462,6 +463,24 @@ function HistoryView(): React.JSX.Element {
       alert('Failed to search orders.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation()
+    if (window.confirm('Are you sure you want to delete this order?')) {
+      try {
+        // @ts-ignore
+        const result = await window.api.deleteOrder(id)
+        if (result.success) {
+          setOrders(orders.filter((o) => o.id !== id))
+        } else {
+          alert('Delete failed: ' + result.error)
+        }
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete order.')
+      }
     }
   }
 
@@ -507,12 +526,17 @@ function HistoryView(): React.JSX.Element {
                 <th className="px-6 py-4 font-semibold">Customer</th>
                 <th className="px-6 py-4 font-semibold">Phone</th>
                 <th className="px-6 py-4 font-semibold text-center">Measurements</th>
+                <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {orders.length > 0 ? (
                 orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                  <tr 
+                    key={order.id} 
+                    onClick={() => setSelectedOrder(order)}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
                     <td className="px-6 py-4 text-slate-600">{new Date(order.date).toLocaleDateString()}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{order.customerName}</td>
                     <td className="px-6 py-4 text-slate-600">{order.phoneNumber}</td>
@@ -524,11 +548,19 @@ function HistoryView(): React.JSX.Element {
                         <span>C: {order.colar}"</span>
                       </div>
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        onClick={(e) => handleDelete(e, order.id)}
+                        className="rounded bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                     No records found.
                   </td>
                 </tr>
@@ -537,6 +569,69 @@ function HistoryView(): React.JSX.Element {
           </table>
         </div>
       </div>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="bg-indigo-600 p-6 text-white text-center relative">
+              <button 
+                onClick={() => setSelectedOrder(null)}
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <h3 className="text-2xl font-bold">Order Details</h3>
+              <p className="opacity-90">{new Date(selectedOrder.date).toLocaleString()}</p>
+            </div>
+            
+            <div className="p-8">
+              {/* Customer Info Summary */}
+              <div className="mb-8 flex justify-between border-b border-slate-100 pb-6">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Customer</p>
+                  <p className="text-xl font-bold text-slate-800">{selectedOrder.customerName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Contact</p>
+                  <p className="text-xl font-bold text-slate-800">{selectedOrder.phoneNumber}</p>
+                </div>
+              </div>
+
+              {/* Measurements Grid Summary */}
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3">
+                {[
+                  { label: 'Length', value: selectedOrder.lambayi },
+                  { label: 'Shoulder', value: selectedOrder.tira },
+                  { label: 'Sleeves', value: `${selectedOrder.astain}" (${selectedOrder.astainType})` },
+                  { label: 'Collar', value: `${selectedOrder.colar}" (${selectedOrder.colarType})` },
+                  { label: 'Width', value: `${selectedOrder.width}" (${selectedOrder.widthType})` },
+                  { label: 'Chest', value: selectedOrder.chati },
+                  { label: 'Shalwar', value: selectedOrder.shalwar },
+                  { label: 'Painsa', value: selectedOrder.painsa },
+                  { label: 'Patti', value: selectedOrder.patti },
+                  { label: 'Front Pocket', value: selectedOrder.frontPocket },
+                  { label: 'Side Pocket', value: selectedOrder.sidePocket },
+                ].map((item) => (
+                  <div key={item.label} className="bg-slate-50 rounded-xl p-3 ring-1 ring-slate-100">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">{item.label}</p>
+                    <p className="text-sm font-bold text-slate-700">{item.value || '-'}</p>
+                  </div>
+                ))}
+              </div>
+
+              {selectedOrder.remarks && (
+                <div className="mt-6 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-100">
+                  <p className="text-[10px] uppercase font-bold text-amber-600 mb-1">Special Remarks</p>
+                  <p className="text-sm text-amber-900">{selectedOrder.remarks}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

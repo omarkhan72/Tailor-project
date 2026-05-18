@@ -149,6 +149,17 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('delete-order', async (_event, orderId) => {
+    try {
+      const deleteStmt = db.prepare('DELETE FROM orders WHERE id = ?')
+      deleteStmt.run(orderId)
+      return { success: true }
+    } catch (error: any) {
+      console.error('Delete Error:', error)
+      return { success: false, error: error?.message || 'Unknown delete error' }
+    }
+  })
+
   createWindow()
 
   app.on('activate', function () {
