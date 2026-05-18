@@ -447,6 +447,7 @@ function HistoryView(): React.JSX.Element {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [orderToDelete, setOrderToDelete] = useState<number | null>(null)
 
   const handleSearch = async () => {
     setLoading(true)
@@ -466,28 +467,37 @@ function HistoryView(): React.JSX.Element {
     }
   }
 
-  const handleDelete = async (e: React.MouseEvent, id: number) => {
-    e.stopPropagation()
-    if (window.confirm('Are you sure you want to delete this order?')) {
-      try {
-        // @ts-ignore
-        const result = await window.api.deleteOrder(id)
-        if (result.success) {
-          setOrders(orders.filter((o) => o.id !== id))
-        } else {
-          alert('Delete failed: ' + result.error)
-        }
-      } catch (error) {
-        console.error(error)
-        alert('Failed to delete order.')
+  const confirmDelete = async () => {
+    if (orderToDelete === null) return
+    try {
+      // @ts-ignore
+      const result = await window.api.deleteOrder(orderToDelete)
+      if (result.success) {
+        setOrders(orders.filter((o) => o.id !== orderToDelete))
+      } else {
+        alert('Delete failed: ' + result.error)
       }
+    } catch (error) {
+      console.error(error)
+      alert('Failed to delete order.')
+    } finally {
+      setOrderToDelete(null)
     }
   }
 
-  // Initial load
+  const handleDeleteClick = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation()
+    setOrderToDelete(id)
+  }
+
+  // Real-time search with debounce
   React.useEffect(() => {
-    handleSearch()
-  }, [])
+    const delayDebounceFn = setTimeout(() => {
+      handleSearch()
+    }, 300)
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchTerm])
 
   return (
     <div className="space-y-6">
@@ -550,7 +560,7 @@ function HistoryView(): React.JSX.Element {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button 
-                        onClick={(e) => handleDelete(e, order.id)}
+                        onClick={(e) => handleDeleteClick(e, order.id)}
                         className="rounded bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
                       >
                         Delete
@@ -628,6 +638,37 @@ function HistoryView(): React.JSX.Element {
                   <p className="text-sm text-amber-900">{selectedOrder.remarks}</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {orderToDelete !== null && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="bg-red-500 p-6 text-white text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h3 className="text-xl font-bold">Confirm Deletion</h3>
+            </div>
+            <div className="p-6 text-center">
+              <p className="text-slate-600 mb-8">Are you sure you want to permanently delete this order? This action cannot be undone.</p>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setOrderToDelete(null)}
+                  className="flex-1 rounded-xl bg-slate-100 py-3 font-bold text-slate-600 transition hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  className="flex-1 rounded-xl bg-red-500 py-3 font-bold text-white shadow-lg shadow-red-100 transition hover:bg-red-600 active:scale-[0.98]"
+                >
+                  Yes, Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>
