@@ -160,6 +160,42 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('update-order', async (_event, data) => {
+    try {
+      const upsertCustomer = db.prepare(`
+        INSERT INTO customers (name, phone)
+        VALUES (?, ?)
+        ON CONFLICT(phone) DO UPDATE SET name=excluded.name
+        RETURNING id
+      `)
+      const customer = upsertCustomer.get(data.customerName, data.phoneNumber) as { id: number } | undefined
+      
+      if (!customer) throw new Error('Failed to create or retrieve customer.')
+      
+      const updateOrder = db.prepare(`
+        UPDATE orders SET
+          customer_id = ?, lambayi = ?, tira = ?, astain = ?, astainType = ?, 
+          colar = ?, colarType = ?, width = ?, widthType = ?, chati = ?, shalwar = ?, 
+          painsa = ?, frontPocket = ?, sidePocket = ?, patti = ?, remarks = ?
+        WHERE id = ?
+      `)
+
+      updateOrder.run(
+        customer.id,
+        data.lambayi, data.tira, data.astain, data.astainType,
+        data.colar, data.colarType, data.width, data.widthType,
+        data.chati, data.shalwar, data.painsa, data.frontPocket,
+        data.sidePocket, data.patti, data.remarks,
+        data.id
+      )
+
+      return { success: true }
+    } catch (error: any) {
+      console.error('Update Error:', error)
+      return { success: false, error: error?.message || 'Unknown update error' }
+    }
+  })
+
   createWindow()
 
   app.on('activate', function () {

@@ -5,7 +5,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   saveOrder: (data: any) => ipcRenderer.invoke('save-order', data),
   searchOrders: (searchTerm: string) => ipcRenderer.invoke('search-orders', searchTerm),
-  deleteOrder: (orderId: number) => ipcRenderer.invoke('delete-order', orderId)
+  deleteOrder: (orderId: number) => ipcRenderer.invoke('delete-order', orderId),
+  updateOrder: (data: any) => ipcRenderer.invoke('update-order', data)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -25,6 +25,7 @@ function App(): React.JSX.Element {
   const [formData, setFormData] = useState(INITIAL_STATE)
   const [currentOrderData, setCurrentOrderData] = useState<any>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showPrintPreview, setShowPrintPreview] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -38,19 +39,27 @@ function App(): React.JSX.Element {
 
   const handleConfirmAndPrint = async () => {
     try {
-      // @ts-ignore (exposed via preload)
-      const result = await window.api.saveOrder(formData)
+      let result
+      // @ts-ignore
+      if ((formData as any).id) {
+        // @ts-ignore
+        result = await window.api.updateOrder(formData)
+      } else {
+        // @ts-ignore
+        result = await window.api.saveOrder(formData)
+      }
 
       if (result.success) {
         setShowConfirmModal(false)
-        setCurrentOrderData({ ...formData, orderId: `#TK-${Date.now().toString().slice(-6)}`, date: new Date().toLocaleString() })
+        const generatedOrderId = (formData as any).orderId || `#TK-${Date.now().toString().slice(-6)}`
+        const generatedDate = (formData as any).date || new Date().toLocaleString()
         
-        setTimeout(() => {
-          window.print()
-          alert('Measurement Saved & Receipt Printed!')
-          setFormData(INITIAL_STATE)
-          setCurrentOrderData(null)
-        }, 100)
+        setCurrentOrderData({ 
+          ...formData, 
+          orderId: generatedOrderId, 
+          date: generatedDate 
+        })
+        setShowPrintPreview(true)
       } else {
         alert('Error saving to database: ' + result.error)
       }
@@ -97,7 +106,7 @@ function App(): React.JSX.Element {
               <header className="mb-8 flex items-center justify-between border-b border-slate-200 pb-6">
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight text-slate-800">Tailor POS</h1>
-                  <p className="text-slate-500">New Measurement Entry - Shalwar Kameez</p>
+                  <p className="text-slate-500">{(formData as any).id ? 'Edit Measurement Entry' : 'New Measurement Entry'} - Shalwar Kameez</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium text-slate-400">Order ID: #TK-{Date.now().toString().slice(-6)}</p>
@@ -358,7 +367,7 @@ function App(): React.JSX.Element {
               </form>
             </>
           ) : (
-            <HistoryView />
+            <HistoryView onEditOrder={(order) => { setFormData(order); setActiveTab('new') }} />
           )}
         </div>
       </div>
@@ -432,6 +441,65 @@ function App(): React.JSX.Element {
         </div>
       )}
 
+      {/* Print Preview Modal */}
+      {showPrintPreview && currentOrderData && (
+        <div className="no-print-area fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="flex flex-col md:flex-row gap-6 max-w-4xl w-full items-center justify-center animate-in fade-in zoom-in-95 duration-200 my-8">
+            
+            {/* The Receipt Preview (80mm width) */}
+            <div className="receipt-paper bg-white shadow-2xl rounded-sm max-h-[85vh] overflow-y-auto select-none">
+              <Receipt data={currentOrderData} />
+            </div>
+
+            {/* Actions Panel */}
+            <div className="flex flex-col gap-3 w-full md:w-64 bg-slate-800/90 backdrop-blur-sm p-6 rounded-2xl border border-slate-750 shadow-xl justify-center">
+              <div className="text-center md:text-left mb-2">
+                <h4 className="text-lg font-bold text-white">Receipt Preview</h4>
+                <p className="text-[11px] text-slate-400 leading-normal mt-1">Exact size: 80mm wide thermal roll. Verify details before physically printing.</p>
+              </div>
+
+              <hr className="border-slate-700 my-1" />
+
+              <button
+                onClick={() => {
+                  window.print()
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 px-4 font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-500 active:scale-[0.98] cursor-pointer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print Now
+              </button>
+
+              <button
+                onClick={() => {
+                  setFormData(INITIAL_STATE)
+                  setCurrentOrderData(null)
+                  setShowPrintPreview(false)
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 px-4 font-bold text-white shadow-lg shadow-indigo-950/20 transition hover:bg-indigo-500 active:scale-[0.98] cursor-pointer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Done & New Order
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowPrintPreview(false)
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-700 py-3 px-4 font-bold text-slate-300 transition hover:bg-slate-650 hover:text-white active:scale-[0.98] cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+            
+          </div>
+        </div>
+      )}
+
       {/* Print Area */}
       {currentOrderData && (
         <div className="print-area">
@@ -442,7 +510,7 @@ function App(): React.JSX.Element {
   )
 }
 
-function HistoryView(): React.JSX.Element {
+function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): React.JSX.Element {
   const [searchTerm, setSearchTerm] = useState('')
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -559,12 +627,20 @@ function HistoryView(): React.JSX.Element {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={(e) => handleDeleteClick(e, order.id)}
-                        className="rounded bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onEditOrder(order) }}
+                          className="rounded bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-600 transition hover:bg-indigo-100 hover:text-indigo-700"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={(e) => handleDeleteClick(e, order.id)}
+                          className="rounded bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
