@@ -6,7 +6,8 @@ const api = {
   saveOrder: (data: any) => ipcRenderer.invoke('save-order', data),
   searchOrders: (searchTerm: string) => ipcRenderer.invoke('search-orders', searchTerm),
   deleteOrder: (orderId: number) => ipcRenderer.invoke('delete-order', orderId),
-  updateOrder: (data: any) => ipcRenderer.invoke('update-order', data)
+  updateOrder: (data: any) => ipcRenderer.invoke('update-order', data),
+  exportBackup: () => ipcRenderer.invoke('export-backup')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

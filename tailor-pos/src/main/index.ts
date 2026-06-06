@@ -1,8 +1,9 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import Database from 'better-sqlite3'
+import fs from 'fs'
 
 // Initialize Database
 const dbPath = join(app.getPath('userData'), 'shop_data.db')
@@ -78,6 +79,29 @@ app.whenReady().then(() => {
 
   // IPC Handlers
   ipcMain.on('ping', () => console.log('pong'))
+
+  ipcMain.handle('export-backup', async (event) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender)
+      if (!mainWindow) throw new Error('Could not find main window')
+
+      const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Export Database Backup',
+        defaultPath: 'tailor_backup_data.db',
+        filters: [{ name: 'SQLite Database', extensions: ['db'] }]
+      })
+
+      if (canceled || !filePath) {
+        return { success: false, error: 'Canceled by user' }
+      }
+
+      fs.copyFileSync(dbPath, filePath)
+      return { success: true }
+    } catch (error: any) {
+      console.error('Backup Error:', error)
+      return { success: false, error: error?.message || 'Unknown backup error' }
+    }
+  })
 
   ipcMain.handle('save-order', async (_event, data) => {
     try {

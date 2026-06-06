@@ -27,6 +27,27 @@ function App(): React.JSX.Element {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showPrintPreview, setShowPrintPreview] = useState(false)
 
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('theme')
+    if (saved === 'dark' || saved === 'light') {
+      return saved
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+
+  React.useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -69,20 +90,37 @@ function App(): React.JSX.Element {
     }
   }
 
+  const handleBackup = async () => {
+    try {
+      // @ts-ignore
+      const result = await window.api.exportBackup()
+      if (result.success) {
+        alert('Database backup saved successfully!')
+      } else if (result.error && result.error !== 'Canceled by user') {
+        alert('Failed to save backup: ' + result.error)
+      }
+    } catch (error: any) {
+      console.error(error)
+      alert('Failed to initiate database backup: ' + error.message)
+    }
+  }
+
   return (
     <>
       {/* Renderer View */}
-      <div className="no-print-area min-h-screen bg-slate-50 p-6 font-sans text-slate-900">
+      <div className="no-print-area min-h-screen bg-slate-50 dark:bg-slate-950 p-6 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200">
         <div className="mx-auto max-w-5xl">
           {/* Navigation Tabs */}
-          <div className="mb-8 flex justify-center">
-            <div className="inline-flex rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
+          <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="hidden sm:block sm:w-1/3"></div> {/* Spacer for desk layout symmetry */}
+            
+            <div className="inline-flex rounded-xl bg-white dark:bg-slate-900 p-1 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
               <button
                 onClick={() => setActiveTab('new')}
                 className={`rounded-lg px-6 py-2 text-sm font-semibold transition-all ${
                   activeTab === 'new'
                     ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-500 hover:bg-slate-50'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 New Order
@@ -92,10 +130,40 @@ function App(): React.JSX.Element {
                 className={`rounded-lg px-6 py-2 text-sm font-semibold transition-all ${
                   activeTab === 'history'
                     ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-500 hover:bg-slate-50'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 History
+              </button>
+            </div>
+
+            <div className="w-full sm:w-1/3 flex justify-center sm:justify-end gap-3">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 text-slate-600 dark:text-slate-300 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer active:scale-95 duration-100"
+                title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              >
+                {theme === 'light' ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                  </svg>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBackup}
+                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white flex items-center gap-1.5 cursor-pointer active:scale-95 duration-100"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Backup Database
               </button>
             </div>
           </div>
@@ -103,43 +171,43 @@ function App(): React.JSX.Element {
           {activeTab === 'new' ? (
             <>
               {/* Header */}
-              <header className="mb-8 flex items-center justify-between border-b border-slate-200 pb-6">
+              <header className="mb-8 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-6">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-slate-800">Tailor POS</h1>
-                  <p className="text-slate-500">{(formData as any).id ? 'Edit Measurement Entry' : 'New Measurement Entry'} - Shalwar Kameez</p>
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Tailor POS</h1>
+                  <p className="text-slate-500 dark:text-slate-400">{(formData as any).id ? 'Edit Measurement Entry' : 'New Measurement Entry'} - Shalwar Kameez</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-slate-400">Order ID: #TK-{Date.now().toString().slice(-6)}</p>
-                  <p className="text-sm font-medium text-slate-400">{new Date().toLocaleDateString()}</p>
+                  <p className="text-sm font-medium text-slate-400 dark:text-slate-500">Order ID: #TK-{Date.now().toString().slice(-6)}</p>
+                  <p className="text-sm font-medium text-slate-400 dark:text-slate-500">{new Date().toLocaleDateString()}</p>
                 </div>
               </header>
 
               <form onSubmit={handleReviewOrder} className="space-y-8">
                 {/* Customer Section */}
-                <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-                  <h2 className="mb-6 text-lg font-semibold text-slate-800">Customer Information</h2>
+                <section className="rounded-2xl bg-white dark:bg-slate-900 p-8 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+                  <h2 className="mb-6 text-lg font-semibold text-slate-800 dark:text-slate-100">Customer Information</h2>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Customer Name</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Customer Name</label>
                       <input
                         type="text"
                         name="customerName"
                         value={formData.customerName}
                         onChange={handleChange}
                         placeholder="Enter full name"
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Phone Number</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Phone Number</label>
                       <input
                         type="tel"
                         name="phoneNumber"
                         value={formData.phoneNumber}
                         onChange={handleChange}
                         placeholder="e.g. 0300-1234567"
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                         required
                       />
                     </div>
@@ -147,38 +215,38 @@ function App(): React.JSX.Element {
                 </section>
 
                 {/* Measurements Section */}
-                <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-                  <h2 className="mb-6 text-lg font-semibold text-slate-800">Measurements (Inches)</h2>
+                <section className="rounded-2xl bg-white dark:bg-slate-900 p-8 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+                  <h2 className="mb-6 text-lg font-semibold text-slate-800 dark:text-slate-100">Measurements (Inches)</h2>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {/* Lambayi */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Lambayi (Length)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Lambayi (Length)</label>
                       <input
                         type="number"
                         step="0.1"
                         name="lambayi"
                         value={formData.lambayi}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                       />
                     </div>
 
                     {/* Tira */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Tira (Shoulder)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tira (Shoulder)</label>
                       <input
                         type="number"
                         step="0.1"
                         name="tira"
                         value={formData.tira}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                       />
                     </div>
 
                     {/* Astain */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Astain (Sleeves)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Astain (Sleeves)</label>
                       <div className="flex gap-2">
                         <input
                           type="number"
@@ -186,13 +254,13 @@ function App(): React.JSX.Element {
                           name="astain"
                           value={formData.astain}
                           onChange={handleChange}
-                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                         />
                         <select
                           name="astainType"
                           value={formData.astainType}
                           onChange={handleChange}
-                          className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
+                          className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500"
                         >
                           <option>Fit</option>
                           <option>Loose</option>
@@ -202,7 +270,7 @@ function App(): React.JSX.Element {
 
                     {/* Colar */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Colar (Collar)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Colar (Collar)</label>
                       <div className="flex gap-2">
                         <input
                           type="number"
@@ -210,13 +278,13 @@ function App(): React.JSX.Element {
                           name="colar"
                           value={formData.colar}
                           onChange={handleChange}
-                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                         />
                         <select
                           name="colarType"
                           value={formData.colarType}
                           onChange={handleChange}
-                          className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
+                          className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500"
                         >
                           <option>English Small</option>
                           <option>Ban</option>
@@ -227,7 +295,7 @@ function App(): React.JSX.Element {
 
                     {/* Width */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Width</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Width</label>
                       <div className="flex gap-2">
                         <input
                           type="number"
@@ -235,13 +303,13 @@ function App(): React.JSX.Element {
                           name="width"
                           value={formData.width}
                           onChange={handleChange}
-                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                         />
                         <select
                           name="widthType"
                           value={formData.widthType}
                           onChange={handleChange}
-                          className="rounded-lg border border-slate-300 bg-slate-50 px-2 text-sm outline-none transition focus:border-indigo-500"
+                          className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 text-sm text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500"
                         >
                           <option>Daman Gol</option>
                           <option>Chauras</option>
@@ -251,93 +319,93 @@ function App(): React.JSX.Element {
 
                     {/* Chati */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Chati (Chest)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Chati (Chest)</label>
                       <input
                         type="number"
                         step="0.1"
                         name="chati"
                         value={formData.chati}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                       />
                     </div>
 
                     {/* Shalwar */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Shalwar</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Shalwar</label>
                       <input
                         type="number"
                         step="0.1"
                         name="shalwar"
                         value={formData.shalwar}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                       />
                     </div>
 
                     {/* Painsa */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Painsa</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Painsa</label>
                       <input
                         type="number"
                         step="0.1"
                         name="painsa"
                         value={formData.painsa}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                       />
                     </div>
 
                     {/* Patti */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Patti</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Patti</label>
                       <input
                         type="text"
                         name="patti"
                         value={formData.patti}
                         onChange={handleChange}
                         placeholder="e.g. 1.25"
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                       />
                     </div>
 
                     {/* Front Pocket */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Front Pocket</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Front Pocket</label>
                       <input
                         type="text"
                         name="frontPocket"
                         value={formData.frontPocket}
                         onChange={handleChange}
                         placeholder="Square / Round"
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                       />
                     </div>
 
                     {/* Side Pocket */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Side Pocket (Qty)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Side Pocket (Qty)</label>
                       <input
                         type="number"
                         name="sidePocket"
                         value={formData.sidePocket}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                       />
                     </div>
                   </div>
                 </section>
 
                 {/* Remarks Section */}
-                <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-                  <h2 className="mb-6 text-lg font-semibold text-slate-800">Other Remarks</h2>
+                <section className="rounded-2xl bg-white dark:bg-slate-900 p-8 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+                  <h2 className="mb-6 text-lg font-semibold text-slate-800 dark:text-slate-100">Other Remarks</h2>
                   <textarea
                     name="remarks"
                     value={formData.remarks}
                     onChange={handleChange}
                     rows={3}
                     placeholder="Add any specific requirements or notes here..."
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
                   ></textarea>
                 </section>
 
@@ -345,7 +413,7 @@ function App(): React.JSX.Element {
                 <div className="flex justify-end pt-4">
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 sm:w-auto"
+                    className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:bg-indigo-700 hover:shadow-indigo-300 dark:hover:shadow-none focus:outline-none focus:ring-4 focus:ring-indigo-500/50 sm:w-auto"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -374,8 +442,8 @@ function App(): React.JSX.Element {
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="no-print-area fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="no-print-area fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white dark:bg-slate-900 shadow-2xl animate-in fade-in zoom-in duration-200 ring-1 ring-black/5 dark:ring-slate-800">
             <div className="bg-indigo-600 p-6 text-white text-center">
               <h3 className="text-2xl font-bold">Review Measurements</h3>
               <p className="opacity-90">Please confirm all details before saving</p>
@@ -383,14 +451,14 @@ function App(): React.JSX.Element {
             
             <div className="p-8">
               {/* Customer Info Summary */}
-              <div className="mb-8 flex justify-between border-b border-slate-100 pb-6">
+              <div className="mb-8 flex justify-between border-b border-slate-100 dark:border-slate-800 pb-6">
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Customer</p>
-                  <p className="text-xl font-bold text-slate-800">{formData.customerName}</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-1">Customer</p>
+                  <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{formData.customerName}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Contact</p>
-                  <p className="text-xl font-bold text-slate-800">{formData.phoneNumber}</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-1">Contact</p>
+                  <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{formData.phoneNumber}</p>
                 </div>
               </div>
 
@@ -407,17 +475,17 @@ function App(): React.JSX.Element {
                   { label: 'Painsa', value: formData.painsa },
                   { label: 'Patti', value: formData.patti },
                 ].map((item) => (
-                  <div key={item.label} className="bg-slate-50 rounded-xl p-3 ring-1 ring-slate-100">
-                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">{item.label}</p>
-                    <p className="text-sm font-bold text-slate-700">{item.value || '-'}</p>
+                  <div key={item.label} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 ring-1 ring-slate-100 dark:ring-slate-800">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-0.5">{item.label}</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{item.value || '-'}</p>
                   </div>
                 ))}
               </div>
 
               {formData.remarks && (
-                <div className="mt-6 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-100">
-                  <p className="text-[10px] uppercase font-bold text-amber-600 mb-1">Special Remarks</p>
-                  <p className="text-sm text-amber-900">{formData.remarks}</p>
+                <div className="mt-6 rounded-xl bg-amber-50 dark:bg-amber-950/20 p-4 ring-1 ring-amber-100 dark:ring-amber-900/30">
+                  <p className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 mb-1">Special Remarks</p>
+                  <p className="text-sm text-amber-900 dark:text-amber-200">{formData.remarks}</p>
                 </div>
               )}
 
@@ -425,13 +493,13 @@ function App(): React.JSX.Element {
               <div className="mt-10 flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => setShowConfirmModal(false)}
-                  className="flex-1 rounded-xl bg-slate-100 py-4 font-bold text-slate-600 transition hover:bg-slate-200"
+                  className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 py-4 font-bold text-slate-600 dark:text-slate-300 transition hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   Go Back & Edit
                 </button>
                 <button
                   onClick={handleConfirmAndPrint}
-                  className="flex-1 rounded-xl bg-indigo-600 py-4 font-bold text-white shadow-lg shadow-indigo-100 transition hover:bg-indigo-700 active:scale-[0.98]"
+                  className="flex-1 rounded-xl bg-indigo-600 py-4 font-bold text-white shadow-lg shadow-indigo-100 dark:shadow-none transition hover:bg-indigo-700 active:scale-[0.98]"
                 >
                   Confirm & Print
                 </button>
@@ -569,10 +637,10 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between border-b border-slate-200 pb-6">
+      <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-800">Order History</h1>
-          <p className="text-slate-500">Search and view past measurements</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Order History</h1>
+          <p className="text-slate-500 dark:text-slate-400">Search and view past measurements</p>
         </div>
       </header>
 
@@ -584,7 +652,7 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           placeholder="Search by name or phone number..."
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900"
         />
         <button
           onClick={handleSearch}
@@ -595,10 +663,10 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
       </div>
 
       {/* Results Table */}
-      <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+      <div className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800">
               <tr>
                 <th className="px-6 py-4 font-semibold">Date</th>
                 <th className="px-6 py-4 font-semibold">Customer</th>
@@ -607,19 +675,19 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {orders.length > 0 ? (
                 orders.map((order) => (
                   <tr 
                     key={order.id} 
                     onClick={() => setSelectedOrder(order)}
-                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                   >
-                    <td className="px-6 py-4 text-slate-600">{new Date(order.date).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 font-medium text-slate-900">{order.customerName}</td>
-                    <td className="px-6 py-4 text-slate-600">{order.phoneNumber}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{new Date(order.date).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{order.customerName}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{order.phoneNumber}</td>
                     <td className="px-6 py-4">
-                      <div className="grid grid-cols-4 gap-2 text-[10px] text-slate-500">
+                      <div className="grid grid-cols-4 gap-2 text-[10px] text-slate-500 dark:text-slate-400">
                         <span>L: {order.lambayi}"</span>
                         <span>T: {order.tira}"</span>
                         <span>A: {order.astain}"</span>
@@ -630,13 +698,13 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
                       <div className="flex justify-end gap-2">
                         <button 
                           onClick={(e) => { e.stopPropagation(); onEditOrder(order) }}
-                          className="rounded bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-600 transition hover:bg-indigo-100 hover:text-indigo-700"
+                          className="rounded bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 transition hover:bg-indigo-100 dark:hover:bg-indigo-900/60 hover:text-indigo-700 dark:hover:text-indigo-300"
                         >
                           Edit
                         </button>
                         <button 
                           onClick={(e) => handleDeleteClick(e, order.id)}
-                          className="rounded bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
+                          className="rounded bg-red-50 dark:bg-red-950/40 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 transition hover:bg-red-100 dark:hover:bg-red-900/60 hover:text-red-700 dark:hover:text-red-300"
                         >
                           Delete
                         </button>
@@ -646,7 +714,7 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                     No records found.
                   </td>
                 </tr>
@@ -658,8 +726,8 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
 
       {/* Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white dark:bg-slate-900 shadow-2xl animate-in fade-in zoom-in duration-200 ring-1 ring-black/5 dark:ring-slate-800">
             <div className="bg-indigo-600 p-6 text-white text-center relative">
               <button 
                 onClick={() => setSelectedOrder(null)}
@@ -675,14 +743,14 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
             
             <div className="p-8">
               {/* Customer Info Summary */}
-              <div className="mb-8 flex justify-between border-b border-slate-100 pb-6">
+              <div className="mb-8 flex justify-between border-b border-slate-100 dark:border-slate-800 pb-6">
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Customer</p>
-                  <p className="text-xl font-bold text-slate-800">{selectedOrder.customerName}</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-1">Customer</p>
+                  <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{selectedOrder.customerName}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Contact</p>
-                  <p className="text-xl font-bold text-slate-800">{selectedOrder.phoneNumber}</p>
+                  <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-1">Contact</p>
+                  <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{selectedOrder.phoneNumber}</p>
                 </div>
               </div>
 
@@ -701,17 +769,17 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
                   { label: 'Front Pocket', value: selectedOrder.frontPocket },
                   { label: 'Side Pocket', value: selectedOrder.sidePocket },
                 ].map((item) => (
-                  <div key={item.label} className="bg-slate-50 rounded-xl p-3 ring-1 ring-slate-100">
-                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">{item.label}</p>
-                    <p className="text-sm font-bold text-slate-700">{item.value || '-'}</p>
+                  <div key={item.label} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 ring-1 ring-slate-100 dark:ring-slate-800">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-0.5">{item.label}</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{item.value || '-'}</p>
                   </div>
                 ))}
               </div>
 
               {selectedOrder.remarks && (
-                <div className="mt-6 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-100">
-                  <p className="text-[10px] uppercase font-bold text-amber-600 mb-1">Special Remarks</p>
-                  <p className="text-sm text-amber-900">{selectedOrder.remarks}</p>
+                <div className="mt-6 rounded-xl bg-amber-50 dark:bg-amber-950/20 p-4 ring-1 ring-amber-100 dark:ring-amber-900/30">
+                  <p className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 mb-1">Special Remarks</p>
+                  <p className="text-sm text-amber-900 dark:text-amber-200">{selectedOrder.remarks}</p>
                 </div>
               )}
             </div>
@@ -721,8 +789,8 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
 
       {/* Delete Confirmation Modal */}
       {orderToDelete !== null && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white dark:bg-slate-900 shadow-2xl animate-in fade-in zoom-in duration-200 ring-1 ring-black/5 dark:ring-slate-800">
             <div className="bg-red-500 p-6 text-white text-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -730,17 +798,17 @@ function HistoryView({ onEditOrder }: { onEditOrder: (order: any) => void }): Re
               <h3 className="text-xl font-bold">Confirm Deletion</h3>
             </div>
             <div className="p-6 text-center">
-              <p className="text-slate-600 mb-8">Are you sure you want to permanently delete this order? This action cannot be undone.</p>
+              <p className="text-slate-600 dark:text-slate-300 mb-8">Are you sure you want to permanently delete this order? This action cannot be undone.</p>
               <div className="flex gap-4">
                 <button 
                   onClick={() => setOrderToDelete(null)}
-                  className="flex-1 rounded-xl bg-slate-100 py-3 font-bold text-slate-600 transition hover:bg-slate-200"
+                  className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 py-3 font-bold text-slate-600 dark:text-slate-300 transition hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={confirmDelete}
-                  className="flex-1 rounded-xl bg-red-500 py-3 font-bold text-white shadow-lg shadow-red-100 transition hover:bg-red-600 active:scale-[0.98]"
+                  className="flex-1 rounded-xl bg-red-500 py-3 font-bold text-white shadow-lg shadow-red-100 dark:shadow-none transition hover:bg-red-600 active:scale-[0.98]"
                 >
                   Yes, Delete
                 </button>
